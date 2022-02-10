@@ -118,7 +118,7 @@ then
 	if [ "$(ls -A ${DIRpolicies})" ]; then
     echo "Generating policy CR yaml"
 		# alternative to zip - requires tar and compress:: tar -cZf ${PathToConfigFolder}/policy.zip -C ${DIRpolicies} .
-    # works if you have zip installed::
+    # works if you have zip installed on the image::
 		cd ${DIRpolicies}
 		zip -r - * > ${PathToConfigFolder}/policy.zip -x '*.zip*'
     policy=$(base64 -w 0 ${PathToConfigFolder}/policy.zip)
