@@ -3,7 +3,7 @@ kind: IntegrationServer
 metadata:
   name: replace-with-server-name
   labels:
-    labelname: ivo
+    labelname: sampleLabel
   namespace: replace-with-namespace
 spec:
   enableMetrics: true

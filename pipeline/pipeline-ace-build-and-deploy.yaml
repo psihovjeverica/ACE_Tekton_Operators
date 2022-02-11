@@ -54,7 +54,7 @@ spec:
       type: string
     - name: integration-server-version
       description: The version of the ACE server to be deployed. Reference:https://www.ibm.com/docs/en/app-connect/containers_cd?topic=resources-specversion-values
-      default: 12.0
+      default: "12.0.1"
       type: string
     - name: target-environment
       description: Target environment to be deployed, i.e. DEV/TEST/PROD. Depending on this value, different configuration will be applied, different license and server image, ...
@@ -66,11 +66,11 @@ spec:
       type: string
     - name: deployment-namespace
       description: The name of the Openshift namespace/project , where the integration server and configuration will be deployed
-      default: ace-demo-tekton
+      default: ace-ivo
       type: string
     - name: nexus-server-base-url
       description: The Base URL of the Nexus server where the bar file will be uploaded
-      default: http://nexus-route-ace-demo-tekton.apps.ocp12.tec.cz.ibm.com
+      default: http://nexus-route-ace-ivo.apps.ocp12.tec.cz.ibm.com
       type: string
     - name: nexus-repository-name
       description: The name of the Nexus repository, where the bar file will be uploaded
