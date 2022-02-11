@@ -41,8 +41,8 @@ spec:
       default: DEFAULT_APP_NAME
       type: string
     - name: integrationServerVersion
-      description: The version of the ACE server to be deployed. Reference: https://www.ibm.com/docs/en/app-connect/containers_cd?topic=resources-specversion-values
-      default: 12.0
+      description: The version of the ACE server to be deployed. Reference - https://www.ibm.com/docs/en/app-connect/containers_cd?topic=resources-specversion-values
+      default: "12.0"
       type: string
     - name: deploymentNamespace
       default: ace
