@@ -82,6 +82,7 @@ On the image below you can see the order in which steps are executed.
   | bar-name-without-extension	 | The name of the bar to be built, without the .bar extension |
   | bar-version	 | The version of the bar to be built, without the .bar extension - will be appended to bar name |
   | ace-toolkit-code-directory	 | The base directory of the repository, containing ACE projects |
+  | target-environment	 | Target environment to be deployed, i.e. DEV/TEST/PROD. Depending on this value, different configuration will be applied, different license and server image, ... |
   | integration-server-name	 | The name of the integration server which will be deployed - will be used in Openshift deployment artefacts |
   | deployment-namespace	 | The name of the Openshift namespace/project , where the integration server and configuration will be deployed |
   | nexus-server-base-url	 | The Base URL of the Nexus server where the bar file will be uploaded |

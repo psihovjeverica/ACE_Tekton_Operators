@@ -3,6 +3,11 @@ kind: Task
 metadata:
   name: ace-deploy-crs
 spec:
+  params:
+    - name: targetEnvironment
+      default: TEST
+      description: Target environment to be deployed, i.e. DEV/TEST/PROD. Depending on this value, different configuration will be applied, different license and server image, ...
+      type: string
   steps:
     - image: 'quay.io/openshift/origin-cli:latest'
       name: deploy-crs

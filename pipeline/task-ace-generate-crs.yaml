@@ -8,6 +8,42 @@ spec:
       default: defaultname
       description: The name of the integration server which will be deployed - will be used in Openshift deployment artefacts
       type: string
+    - name: targetEnvironment
+      default: TEST
+      description: Target environment to be deployed, i.e. DEV/TEST/PROD. Depending on this value, different configuration will be applied, different license and server image, ...
+      type: string
+    - name: serverLicense
+      default: L-APEH-C49KZH
+      description: The license code for the deployed server. Default is set to ACE@CP4I production, needs to be updated appropriately. https://www.ibm.com/docs/en/app-connect/containers_cd?topic=resources-licensing-reference-app-connect-operator
+      type: string
+    - name: serverUsage
+      description: The tag of the server. Default is set to ACE@CP4I production, needs to be updated appropriately. https://www.ibm.com/docs/en/app-connect/containers_cd?topic=resources-licensing-reference-app-connect-operator
+      default: CloudPakForIntegrationProduction
+      type: string
+    - name: serverCpuLimit
+      description: The CPU limit for ACE server
+      default: 1000m
+      type: string
+    - name: serverMemoryLimit
+      description: The RAM limit for ACE server
+      default: 750Mi
+      type: string
+    - name: serverCpuRequest
+      description: The CPU request (minimum requirement for deployment) for ACE server
+      default: 300m
+      type: string
+    - name: serverMemoryRequest
+      description: The RAM request (minimum requirement for deployment) for ACE server
+      default: 350Mi
+      type: string
+    - name: defaultAppName
+      description: Name of default application which is created in case there are any resources which do not belong to library or app
+      default: DEFAULT_APP_NAME
+      type: string
+    - name: integrationServerVersion
+      description: The version of the ACE server to be deployed. Reference: https://www.ibm.com/docs/en/app-connect/containers_cd?topic=resources-specversion-values
+      default: 12.0
+      type: string
     - name: deploymentNamespace
       default: ace
       description: The name of the Openshift namespace/project , where the integration server and configuration will be deployed
@@ -36,6 +72,24 @@ spec:
     - image: 'image-registry.openshift-image-registry.svc:5000/ace/ace-with-zip'
       name: generate-crs
       env:
+          - name: SERVER_LICENSE
+            value: $(params.serverLicense)
+          - name: SERVER_USAGE
+            value: $(params.serverUsage)
+          - name: SERVER_CPU_LIMIT
+            value: $(params.serverCpuLimit)
+          - name: SERVER_MEMORY_LIMIT
+            value: $(params.serverMemoryLimit)
+          - name: SERVER_CPU_REQUEST
+            value: $(params.serverCpuRequest)
+          - name: SERVER_MEMORY_REQUEST
+            value: $(params.serverMemoryRequest)
+          - name: DEFAULT_APP_NAME
+            value: $(params.defaultAppName)
+          - name: INT_SERVER_VERSION
+            value: $(params.integrationServerVersion)
+          - name: TARGET_ENVIRONMENT
+            value: $(params.targetEnvironment)
           - name: INTEGRATION_SERVER_NAME
             value: $(params.integrationServerName)
           - name: DEPLOYMENT_NAMESPACE
@@ -51,9 +105,160 @@ spec:
           - name: BAR_VERSION
             value: $(params.barVersion)
       resources: {}
-      script: |
-        /workspace/output/generate_CRs.sh
-        find /workspace
+      script: >
+
+        PathToConfigFolder=/workspace/output/initial-config/${TARGET_ENVIRONMENT}
+
+        DIRbarauth=${PathToConfigFolder}/barauth
+        DIRodbcini=${PathToConfigFolder}/odbcini
+        DIRsetdbparms=${PathToConfigFolder}/setdbparms
+        DIRtruststore=${PathToConfigFolder}/truststore
+        DIRpolicies=${PathToConfigFolder}/policies
+        DIRserverconf=${PathToConfigFolder}/serverconf
+        # the generic files are located in folder "extensions", because the same/ similar capability is expected in containerised version of ACE under name/folder extensions
+        DIRgenericFiles=${PathToConfigFolder}/extensions
+
+        CRs_template_folder=/workspace/output/operator_resources_CRs
+        CRs_generated_folder=/workspace/output/operator_resources_CRs/generated
+
+        BARurl=${NEXUS_SERVER_BASE_URL}/repository/${NEXUS_REPOSITORY_NAME}/${NEXUS_PATH}/${BAR_VERSION}/${BAR_NAME}-${BAR_VERSION}.bar
+
+        mkdir ${CRs_generated_folder}
+        mkdir ${CRs_generated_folder}/configurations
+
+        # Create the Integration Server CR in any case
+        echo " ================= Generating integration server CR yaml ================= "
+        sed -e "s/replace-with-server-name/${INTEGRATION_SERVER_NAME}/" -e "s~replace-with-namespace~${DEPLOYMENT_NAMESPACE}~" -e "s/replace-with-license/${SERVER_LICENSE}/"  -e "s/replace-with-usage/${SERVER_USAGE}/"  -e "s/replace-with-cpu-limit/${SERVER_CPU_LIMIT}/"  -e "s/replace-with-memory-limit/${SERVER_MEMORY_LIMIT}/"  -e "s/replace-with-cpu-request/${SERVER_CPU_REQUEST}/"  -e "s/replace-with-memory-request/${SERVER_MEMORY_REQUEST}/" -e "s/replace-with-default-app-name/${DEFAULT_APP_NAME}/" -e "s/replace-with-is-version/${INT_SERVER_VERSION}/" -e "s~replace-With-Bar-URL~${BARurl}~" ${CRs_template_folder}/integrationServer.yaml > ${CRs_generated_folder}/integrationServer-generated.yaml
+
+        echo " =================================================== "
+        cat ${CRs_generated_folder}/integrationServer-generated.yaml
+        echo " =================================================== "
+
+        # Create CR for bar auth - always set it, as it is always needed if external bar repo used
+        if [ -d "${DIRbarauth}" ]
+        then
+        	if [ "$(ls -A ${DIRbarauth})" ]; then
+            echo " ================= Generating bar auth CR yaml ================= "
+            barauth=$(base64 -w 0 ${DIRbarauth}/auth.json)
+            sed -e "s/replace-with-namespace/${DEPLOYMENT_NAMESPACE}/" -e "s~replace-with-barauth-name~${BAR_NAME}-barauth~" -e "s~replace-with-barauth-base64~${barauth}~" ${CRs_template_folder}/configuration_barauth.yaml > ${CRs_generated_folder}/configurations/barauth-generated.yaml
+            #add reference to this config cr to integration server cr
+        		echo " >>> Adding barauth configuration reference to integration server CR yaml <<< "
+            echo "    - ${BAR_NAME}-barauth" >> ${CRs_generated_folder}/integrationServer-generated.yaml
+        	else
+            echo " >>> ${DIRbarauth} is Empty. Skipping. <<< "
+        	fi
+        else
+        	echo " >>> Directory ${DIRbarauth} not found. Skipping. <<< "
+        fi
+
+        # Create CR for odbc.ini , if folder exists and is not empty
+        if [ -d "${DIRodbcini}" ]
+        then
+        	if [ "$(ls -A ${DIRodbcini})" ]; then
+            echo " ================= Generating odbcini CR yaml ================= "
+            odbcini=$(base64 -w 0 ${DIRodbcini}/odbc.ini)
+            sed -e "s/replace-with-namespace/${DEPLOYMENT_NAMESPACE}/" -e "s~replace-with-odbcini-name~${BAR_NAME}-odbcini~" -e "s~replace-with-odbcini-base64~${odbcini}~" ${CRs_template_folder}/configuration_odbcini.yaml > ${CRs_generated_folder}/configurations/odbcini-generated.yaml
+            #add reference to this config cr to integration server cr
+        		echo " >>> Adding odbcini configuration reference to integration server CR yaml <<< "
+            echo "    - ${BAR_NAME}-odbcini" >> ${CRs_generated_folder}/integrationServer-generated.yaml
+        	else
+            echo " >>> ${DIRodbcini} is Empty. Skipping. <<< "
+        	fi
+        else
+        	echo " >>> Directory ${DIRodbcini} not found. Skipping. <<< "
+        fi
+
+        # Create CR for genericFiles (custom files to be transfered to IS container) , if folder exists and is not empty
+        if [ -d "${DIRgenericFiles}" ]
+        then
+        	if [ "$(ls -A ${DIRgenericFiles})" ]; then
+            echo " ================= Generating GENERIC CR yaml ================= "
+        		zip -r -j - ${DIRgenericFiles}/* > ${PathToConfigFolder}/generic.zip -x '*.zip*'
+            generic=$(base64 -w 0 ${PathToConfigFolder}/generic.zip)
+            sed -e "s/replace-with-namespace/${DEPLOYMENT_NAMESPACE}/" -e "s~replace-with-generic-name~${BAR_NAME}-generic~" -e "s~replace-with-generic-base64~${generic}~" -e "s~replace-with-generic-secret~${BAR_NAME}-generic~" ${CRs_template_folder}/configuration_generic.yaml > ${CRs_generated_folder}/configurations/generic-generated.yaml
+            #add reference to this config cr to integration server cr
+        		echo " >>> Adding GENERIC configuration reference to integration server CR yaml <<< "
+            echo "    - ${BAR_NAME}-generic" >> ${CRs_generated_folder}/integrationServer-generated.yaml
+        	else
+            echo " >>> ${DIRgenericFiles} is Empty. Skipping. <<< "
+        	fi
+        else
+        	echo " >>> Directory ${DIRgenericFiles} not found. Skipping. <<< "
+        fi
+
+        # Create CR for setdbparms if folder exists and is not empty
+        if [ -d "${DIRsetdbparms}" ]
+        then
+        	if [ "$(ls -A ${DIRsetdbparms})" ]; then
+            echo " ================= Generating setdbparms CR yaml ================= "
+            setdbparms=$(base64 -w 0 ${DIRsetdbparms}/setdbparms.txt)
+            sed -e "s/replace-with-namespace/${DEPLOYMENT_NAMESPACE}/" -e "s~replace-with-setdbparms-name~${BAR_NAME}-setdbparms~" -e "s~replace-with-setdbparms-base64~${setdbparms}~" ${CRs_template_folder}/configuration_setdbparms.yaml > ${CRs_generated_folder}/configurations/setdbparms-generated.yaml
+            #add reference to this config cr to integration server cr
+        		echo " >>> Adding setdbparms configuration reference to integration server CR yaml <<< "
+            echo "    - ${BAR_NAME}-setdbparms" >> ${CRs_generated_folder}/integrationServer-generated.yaml
+        	else
+            echo " >>> ${DIRsetdbparms} is Empty. Skipping. <<< "
+        	fi
+        else
+        	echo " >>> Directory ${DIRsetdbparms} not found. Skipping. <<< "
+        fi
+
+        # Create CR for truststore if folder exists and is not empty
+        if [ -d "${DIRtruststore}" ]
+        then
+        	if [ "$(ls -A ${DIRtruststore})" ]; then
+            echo " ================= Generating truststore CR yaml ================= "
+            truststore=$(base64 -w 0 server-config/initial-config/truststore/cert.p12)
+            sed -e "s/replace-with-namespace/${DEPLOYMENT_NAMESPACE}/" -e "s~replace-with-truststore-name~${BAR_NAME}-truststore~" -e "s~replace-with-truststore-base64~${truststore}~" ${CRs_template_folder}/configuration_truststore.yaml > ${CRs_generated_folder}/configurations/truststore-generated.yaml
+            #add reference to this config cr to integration server cr
+        		echo " >>> Adding truststore configuration reference to integration server CR yaml <<< "
+            echo "    - ${BAR_NAME}-truststore" >> ${CRs_generated_folder}/integrationServer-generated.yaml
+          else
+            echo " >>> ${DIRtruststore} is Empty. Skipping. <<< "
+        	fi
+        else
+        	echo " >>> Directory ${DIRtruststore} not found. Skipping. <<< "
+        fi
+
+        # If folder exists and not empty, Create CR for the policy project, zip policy files, exclude any old zip file and replace old zip file
+        if [ -d "${DIRpolicies}" ]
+        then
+        	if [ "$(ls -A ${DIRpolicies})" ]; then
+            echo " ================= Generating policy CR yaml ================= "
+        		# alternative to zip - requires tar and compress:: tar -cZf ${PathToConfigFolder}/policy.zip -C ${DIRpolicies} .
+            # works if you have zip installed on the image::
+        		cd ${DIRpolicies}
+        		zip -r - * > ${PathToConfigFolder}/policy.zip -x '*.zip*'
+            policy=$(base64 -w 0 ${PathToConfigFolder}/policy.zip)
+            sed -e "s/replace-with-namespace/${DEPLOYMENT_NAMESPACE}/" -e "s~replace-with-policy-name~${BAR_NAME}-policy~" -e "s~replace-with-policy-base64~${policy}~" ${CRs_template_folder}/configuration_policyProject.yaml > ${CRs_generated_folder}/configurations/policyProject-generated.yaml
+            #add reference to this config cr to integration server cr
+        		echo " >>> Adding policyProject configuration reference to integration server CR yaml <<< "
+            echo "    - ${BAR_NAME}-policy" >> ${CRs_generated_folder}/integrationServer-generated.yaml
+        else
+            echo " >>> ${DIRpolicies} is Empty. Skipping. <<< "
+        	fi
+        else
+        	echo " >>> Directory ${DIRpolicies} not found. Skipping. <<< "
+        fi
+
+        # Create CR for server configuration
+        if [ -d "${DIRserverconf}" ]
+        then
+        	if [ "$(ls -A ${DIRserverconf})" ]; then
+            echo " ================= Generating server conf CR yaml ================= "
+            serverconf=$(base64 -w 0 ${DIRserverconf}/server.conf.yaml)
+            sed -e "s/replace-with-namespace/${DEPLOYMENT_NAMESPACE}/" -e "s~replace-with-serverconf-name~${BAR_NAME}-serverconf~" -e "s~replace-with-serverconf-base64~${serverconf}~" ${CRs_template_folder}/configuration_serverconf.yaml > ${CRs_generated_folder}/configurations/server.conf-generated.yaml
+            #add reference to this config cr to integration server cr
+        		echo " >>> Adding serverconf configuration reference to integration server CR yaml <<< "
+            echo "    - ${BAR_NAME}-serverconf" >> ${CRs_generated_folder}/integrationServer-generated.yaml
+        else
+            echo " >>> ${DIRserverconf} is Empty. Skipping. <<< "
+        	fi
+        else
+        	echo " >>> Directory ${DIRserverconf} not found. Skipping. <<< "
+        fi
+
+        echo " ================= FINISHED generating CR yaml files ================= "
   workspaces:
     - description: The git repo has been cloned onto the volume backing this Workspace.
       name: output

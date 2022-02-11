@@ -9,32 +9,32 @@ spec:
   enableMetrics: true
   license:
     accept: true
-    license: L-APEH-C49KZH
-    use: CloudPakForIntegrationProduction
+    license: replace-with-license
+    use: replace-with-usage
   pod:
     containers:
       runtime:
         resources:
           limits:
-            cpu: 1000m
-            memory: 350Mi
+            cpu: replace-with-cpu-limit
+            memory: replace-with-memory-limit
           requests:
-            cpu: 1000m
-            memory: 300Mi
+            cpu: replace-with-cpu-request
+            memory: replace-with-memory-request
   adminServerSecure: true
   router:
     timeout: 120s
-  defaultAppName: IVO_DEFAULT_APP_NAME
+  defaultAppName: replace-with-default-app-name
   env:
-    - name: IVO_ENV1
-      value: IVO_VALUE1
-    - name: ENV1
-      value: VALUE2
+    - name: ENV_VAR1
+      value: SAMPLE_VALUE1
+    - name: ENV_VAR2
+      value: SAMPLE_VALUE2
   designerFlowsOperationMode: disabled
   createDashboardUsers: true
   service:
     endpointType: http
-  version: 12.0.1
+  version: replace-with-is-version
   logFormat: basic
   replicas: 1
   barURL: replace-With-Bar-URL

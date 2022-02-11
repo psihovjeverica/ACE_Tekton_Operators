@@ -6,7 +6,7 @@ spec:
   params:
     - name: git-url
       description: The git repository URL to clone from
-      default: 'https://github.com/isalkovic/ACE_Tekton_Operators.git'
+      default: 'https://github.com/psihovjeverica/ACE_Tekton_Operators.git'
       type: string
     - name: git-revision
       description: Revision to checkout. (branch, tag, sha, ref, etc...)
@@ -24,9 +24,45 @@ spec:
       description: The base directory of the repository, containing ACE projects
       default: ace-toolkit-code
       type: string
+    - name: server-license
+      description: The license code for the deployed server. Default is set to ACE@CP4I production, needs to be updated appropriately. https://www.ibm.com/docs/en/app-connect/containers_cd?topic=resources-licensing-reference-app-connect-operator
+      default: L-APEH-C49KZH
+      type: string
+    - name: server-usage
+      description: The tag of the server. Default is set to ACE@CP4I production, needs to be updated appropriately. https://www.ibm.com/docs/en/app-connect/containers_cd?topic=resources-licensing-reference-app-connect-operator
+      default: CloudPakForIntegrationProduction
+      type: string
+    - name: server-cpu-limit
+      description: The CPU limit for ACE server
+      default: 1000m
+      type: string
+    - name: server-memory-limit
+      description: The RAM limit for ACE server
+      default: 750Mi
+      type: string
+    - name: server-cpu-request
+      description: The CPU request (minimum requirement for deployment) for ACE server
+      default: 300m
+      type: string
+    - name: server-memory-request
+      description: The RAM request (minimum requirement for deployment) for ACE server
+      default: 350Mi
+      type: string
+    - name: default-app-name
+      description: Name of default application which is created in case there are any resources which do not belong to library or app
+      default: DEFAULT_APP_NAME
+      type: string
+    - name: integration-server-version
+      description: The version of the ACE server to be deployed. Reference: https://www.ibm.com/docs/en/app-connect/containers_cd?topic=resources-specversion-values
+      default: 12.0
+      type: string
+    - name: target-environment
+      description: Target environment to be deployed, i.e. DEV/TEST/PROD. Depending on this value, different configuration will be applied, different license and server image, ...
+      default: TEST
+      type: string
     - name: integration-server-name
       description: The name of the integration server which will be deployed - will be used in Openshift deployment artefacts
-      default: acedemnotekton
+      default: acedemotekton
       type: string
     - name: deployment-namespace
       description: The name of the Openshift namespace/project , where the integration server and configuration will be deployed
@@ -89,6 +125,24 @@ spec:
           workspace: git-source
     - name: ace-generate-crs
       params:
+        - name: targetEnvironment
+          value: $(params.target-environment)
+        - name: serverLicense
+          value: $(params.server-license)
+        - name: serverUsage
+          value: $(params.server-usage)
+        - name: serverCpuLimit
+          value: $(params.server-cpu-limit)
+        - name: serverMemoryLimit
+          value: $(params.server-memory-limit)
+        - name: serverCpuRequest
+          value: $(params.server-cpu-request)
+        - name: serverMemoryRequest
+          value: $(params.server-memory-request)
+        - name: defaultAppName
+          value: $(params.default-app-name)
+        - name: integrationServerVersion
+          value: $(params.integration-server-version)
         - name: integrationServerName
           value: $(params.integration-server-name)
         - name: deploymentNamespace
@@ -136,6 +190,9 @@ spec:
         - name: output
           workspace: git-source
     - name: ace-deploy-crs
+      params:
+        - name: targetEnvironment
+          value: $(params.target-environment)
       runAfter:
         - ace-generate-crs
         - ace-nexus-upload-bar
