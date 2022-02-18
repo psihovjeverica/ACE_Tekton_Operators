@@ -6,6 +6,9 @@ metadata:
     labelname: sampleLabel
   namespace: replace-with-namespace
 spec:
+  annotations:
+    key1: value1
+    key2: value2
   enableMetrics: true
   license:
     accept: true
@@ -19,7 +22,7 @@ spec:
     containers:
       runtime:
         volumeMounts:
-        - mountPath: /logs-splunk
+        - mountPath: /home/aceuser/ace-server
           name: logs-splunk-volume
         resources:
           limits:
