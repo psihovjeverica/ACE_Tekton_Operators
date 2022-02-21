@@ -15,15 +15,15 @@ spec:
     license: replace-with-license
     use: replace-with-usage
   pod:
-    volumes:
-    - name: logs-splunk-volume
-      persistentVolumeClaim:
-        claimName: logs-splunk-claim
+  #  volumes:
+  #  - name: logs-splunk-volume
+  #    persistentVolumeClaim:
+  #      claimName: logs-splunk-claim
     containers:
-      runtime:
-        volumeMounts:
-        - mountPath: /home/aceuser/generic
-          name: logs-splunk-volume
+  #    runtime:
+  #      volumeMounts:
+  #      - mountPath: /home/aceuser/generic
+  #        name: logs-splunk-volume
         resources:
           limits:
             cpu: replace-with-cpu-limit
