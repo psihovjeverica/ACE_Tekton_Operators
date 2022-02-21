@@ -22,7 +22,7 @@ spec:
     containers:
       runtime:
         volumeMounts:
-        - mountPath: /home/aceuser/ace-server
+        - mountPath: /home/aceuser/generic
           name: logs-splunk-volume
         resources:
           limits:
