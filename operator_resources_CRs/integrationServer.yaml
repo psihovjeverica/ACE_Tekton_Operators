@@ -3,7 +3,7 @@ kind: IntegrationServer
 metadata:
   name: replace-with-server-name
   labels:
-    labelname: sampleLabel
+    uniqueacename: replace-with-label-name
   namespace: replace-with-namespace
 spec:
   annotations:

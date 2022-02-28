@@ -512,4 +512,7 @@ UserVariables:
 UserVariables:
   startup-phase10-script: '/tmp/test-script.sh'
 ```  
-- If the Openshift version is 4.6 or older, the openshift pipelines version will be 1.2 or older, which it seems is not supporting the Task:workspaces.optional parameter. This means that the git clone task will not run on OCP 4.6 or older, with the current configuration. When I encountered this situation, my quick and dirty solution was to comment out these "optional" workspace references (last 3 on the bottom of the file) in the *ace-git-clone* task definition.
+
+- If the Openshift version is 4.6 or older, the openshift pipelines version will be 1.2 or older, which it seems is not supporting the Task:workspaces.optional parameter. This means that the git clone task will not run on OCP 4.6 or older, with the current configuration. When I encountered this situation, my quick and dirty solution was to comment out these "optional" workspace references (last 3 on the bottom of the file) in the *ace-git-clone* task definition.  
+
+- If a configuration referenced by the integration server CR is modified, the integration server will be restarted (new pod creted). Same will happen if Integration server CR is updated directly.
